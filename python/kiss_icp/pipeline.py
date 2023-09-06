@@ -89,7 +89,7 @@ class OdometryPipeline:
         self._write_gt_poses()
         self._write_cfg()
         self._write_log()
-        return self.results
+        return self.results, self.poses, self._get_frames_timestamps()
 
     # Private interface  ------
     def _run_pipeline(self):
