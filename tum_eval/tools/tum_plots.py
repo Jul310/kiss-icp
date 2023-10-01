@@ -1,11 +1,16 @@
 import matplotlib.pyplot as plt
+import pprint
 
 from evo.core import metrics
+from evo.core import sync
+from evo.core.sync import TrajectoryPair
 from evo.core.trajectory import PosePath3D, PoseTrajectory3D
 from evo.tools import plot
 from evo.tools.settings import SETTINGS
 
 from typing import Dict
+
+from tools.tum_tools import align_origin, sync_trajectories
 
 
 def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True, figsize=None) -> None:
@@ -75,7 +80,33 @@ def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D, traj_est: PoseTraje
     # ax.set_title(f"Sequence {sequence}")
     plt.show()
     
+
+def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, plot_error='ape', max_diff=0.01):
     
+    traj_ref, traj_est = traj
+    if align_origin:
+        traj_est = align_origin(traj_est)
+    
+    traj_ref, traj_est = sync_trajectories(traj_ref, traj_est)
+    
+    ape_metric = metrics.APE()
+    ape_metric.process_data((traj_ref, traj_est))
+    ape_stats = ape_metric.get_all_statistics()
+    
+    if print_stats:
+        pprint.pprint(ape_stats)
+    
+    if plot_error == 'ape':
+        plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats)
+    elif plot_error == 'rpy':        
+        plot_rpy_errors(traj_ref, traj_est)
+    elif plot_error == 'xyz':
+        plot_xyz_errors(traj_ref, traj_est)
+    else:
+        raise RuntimeError(f"Unsupported plot type: plot_error={plot_error}. Must be one of ['ape', 'rpy', 'xyz']!")
+    return ape_stats
+
+
 def plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats, title=None):
     plot_mode = plot.PlotMode.xy
     fig = plt.figure()

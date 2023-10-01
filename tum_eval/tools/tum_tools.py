@@ -24,11 +24,18 @@ def wgsToENU(wgs, origin):
 
 
 def read_pickle(file) -> Dict:
-    with open(f"{file}.pkl", 'rb') as f:
+    
+    if not str(file).endswith('.pkl'):
+        file = f"{file}.pkl"
+    
+    with open(file, 'rb') as f:
         return pickle.load(f)
     
 def write_pickle(data, file):
-    with open(f"{file}.pkl", 'wb') as f:
+    if not str(file).endswith('.pkl'):
+        file = f"{file}.pkl"
+    
+    with open(file, 'wb') as f:
         pickle.dump(data, f)
     
 
@@ -81,12 +88,8 @@ def save_poses_tum_format(filename, poses, timestamps):
     np.savetxt(fname=f"{filename}_tum.txt", X=_to_tum_format(poses, timestamps), fmt="%.4f")
 
 
-# Aling Origin
-def align_and_sync_origin(traj: TrajectoryPair, gt_orientation_deg=101.0) -> TrajectoryPair:
-    traj_est, traj_ref = traj
-    align_origin(traj_est, gt_orientation_deg)
-    return sync.associate_trajectories(traj_ref, traj_est)
-
+def sync_trajectories(traj_ref, traj_est, max_diff=0.01):
+    return sync.associate_trajectories(traj_ref, traj_est, max_diff=max_diff, first_name="Reference", snd_name="Estimated")
 
 def align_origin(traj_est, gt_orientation_deg=101.0) -> TrajectoryPair:
     yaw = math.pi/2  - (gt_orientation_deg * math.pi/180)
@@ -96,6 +99,7 @@ def align_origin(traj_est, gt_orientation_deg=101.0) -> TrajectoryPair:
     origin_se3[:3,:3] = gt_roation_matrix
     ref_pose_origin = PosePath3D(poses_se3=[origin_se3])
     traj_est.align_origin(ref_pose_origin)
+    return traj_est
     
 
     
