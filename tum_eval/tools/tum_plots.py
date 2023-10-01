@@ -80,7 +80,13 @@ def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D, traj_est: PoseTraje
     plt.show()
     
 
-def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, plot_error='ape', max_diff=0.01, est_name="Estimated"):
+def plot_compare(traj: TrajectoryPair, 
+                 align_origin=False,
+                 print_stats=False,
+                 plot_mode='ape',
+                 max_diff=0.01,
+                 est_name="Estimated",
+                 **kwargs):
     """_summary_
 
     Args:
@@ -103,36 +109,50 @@ def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, pl
         traj_est = tum_tools.align_origin(traj_est)
     
     traj_ref, traj_est = tum_tools.sync_trajectories(traj_ref, traj_est, max_diff)
+    metric = None
     
-    ape_metric = metrics.APE()
-    ape_metric.process_data((traj_ref, traj_est))
-    ape_stats = ape_metric.get_all_statistics()
-    
-    if print_stats:
-        pprint.pprint(ape_stats)
-    
-    if plot_error == 'ape':
-        plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats)
-    elif plot_error == 'rpy':        
+    if plot_mode == 'ape':
+        metric = plot_ape_errors(traj_ref, traj_est, **kwargs)
+    elif plot_mode == 'rpe':
+        metric = plot_rpe_errors(traj_ref, traj_est, **kwargs)
+    elif plot_mode == 'rpy':        
         plot_rpy_errors(traj_ref, traj_est, est_name)
-    elif plot_error == 'xyz':
+    elif plot_mode == 'xyz':
         plot_xyz_errors(traj_ref, traj_est, est_name)
     else:
-        raise RuntimeError(f"Unsupported plot type: plot_error={plot_error}. Must be one of ['ape', 'rpy', 'xyz']!")
-    return ape_stats
+        raise RuntimeError(f"Unsupported plot type: plot_mode={plot_mode}. Must be one of ['ape', 'rpe', 'rpy', 'xyz']!")
+    
+    if print_stats and metric is not None:
+        pprint.pprint(metric.get_all_statistics())
+    return metric.get_result()
 
 
+def plot_rpe_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part):
+    rpe_metric = metrics.RPE(pose_relation=pose_relation)
+    rpe_metric.process_data((traj_ref, traj_est))
+    rpe_stats = rpe_metric.get_all_statistics()
+    plot_error_metric(traj_ref, traj_est, rpe_metric, rpe_stats, title)
+    return rpe_metric
 
+    
+def plot_ape_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part):
+    ape_metric = metrics.APE(pose_relation=pose_relation)
+    ape_metric.process_data((traj_ref, traj_est))
+    ape_stats = ape_metric.get_all_statistics()
+    plot_error_metric(traj_ref, traj_est, ape_metric, ape_stats, title)
+    return ape_metric
+    
 
-def plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats, title=None):
+def plot_error_metric(traj_ref, traj_est, metric, stats, title=None):
     plot_mode = plot.PlotMode.xy
     fig = plt.figure(figsize=get_figsize(wf=1, hf=1))
     ax = plot.prepare_axis(fig, plot_mode)
     plot.traj(ax, plot_mode, traj_ref, '--', "gray", "reference")
-    plot.traj_colormap(ax, traj_est, ape_metric.error, 
-                   plot_mode, min_map=ape_stats["min"], max_map=ape_stats["max"])
+    plot.traj_colormap(ax, traj_est, metric.error, 
+                   plot_mode, min_map=stats["min"], max_map=stats["max"])
     ax.legend()
-    ax.set_title(title if title is not None else "")
+    if title :
+        ax.set_title(title)
     plt.show()
 
 
