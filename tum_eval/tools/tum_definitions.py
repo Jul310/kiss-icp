@@ -10,3 +10,13 @@ class Mdv3Dataset(Enum):
     OUSTER_MERGE = "mdv3_ouster_merge"
     OUSTER_INNOVUSION_FRONT_NO_MERGE = "mdv3_ouster_inno_front_no_merge"
     SYNC_MERGE = "mdv3_sync_merge"
+    
+KISS_CONFIG = {
+    'config': None,
+    'deskew': False,
+    'max_range': None,
+    'visualize': False,
+    'n_scans': -1,
+    'jump': 0,
+    'out_dir': "data/kiss_results"
+}

@@ -4,6 +4,7 @@ import math
 import numpy as np
 import os 
 import pymap3d as pm
+import pickle
 
 from evo.core import sync
 from evo.core.sync import TrajectoryPair
@@ -15,10 +16,21 @@ from pyquaternion import Quaternion
 
 from scipy.spatial.transform import Rotation as R
 
+from typing import Dict
+
 
 def wgsToENU(wgs, origin):
     return np.array(pm.geodetic2enu(*wgs, *origin))
 
+
+def read_pickle(file) -> Dict:
+    with open(f"{file}.pkl", 'rb') as f:
+        return pickle.load(f)
+    
+def write_pickle(data, file):
+    with open(f"{file}.pkl", 'wb') as f:
+        pickle.dump(data, f)
+    
 
 def load_gt_poses(dataset_dir, transform_pos=None):
     """Load GT poses from a list of files. 
@@ -70,17 +82,21 @@ def save_poses_tum_format(filename, poses, timestamps):
 
 
 # Aling Origin
-def align_origin(traj: TrajectoryPair, gt_orientation_deg=101.0) -> TrajectoryPair:
+def align_and_sync_origin(traj: TrajectoryPair, gt_orientation_deg=101.0) -> TrajectoryPair:
+    traj_est, traj_ref = traj
+    align_origin(traj_est, gt_orientation_deg)
+    return sync.associate_trajectories(traj_ref, traj_est)
+
+
+def align_origin(traj_est, gt_orientation_deg=101.0) -> TrajectoryPair:
     yaw = math.pi/2  - (gt_orientation_deg * math.pi/180)
     gt_roation_matrix = R.from_euler('xyz', [0, 0, yaw]).as_matrix()
 
     origin_se3 = np.eye(4)
     origin_se3[:3,:3] = gt_roation_matrix
     ref_pose_origin = PosePath3D(poses_se3=[origin_se3])
-    
-    traj_est, traj_ref = traj
     traj_est.align_origin(ref_pose_origin)
-    return sync.associate_trajectories(traj_ref, traj_est)
+    
 
     
 def run_kiss_icp_pipeline(dataset_path, config, gt_poses=None):
