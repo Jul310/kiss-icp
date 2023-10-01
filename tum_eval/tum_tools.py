@@ -6,6 +6,7 @@ import os
 import pymap3d as pm
 
 from evo.core import sync
+from evo.core.sync import TrajectoryPair
 from evo.core.trajectory import PoseTrajectory3D, PosePath3D
 
 from kiss_icp.datasets import dataset_factory
@@ -69,7 +70,7 @@ def save_poses_tum_format(filename, poses, timestamps):
 
 
 # Aling Origin
-def align_origin(traj: 'TrajectoryPair', gt_orientation_deg=101.0):
+def align_origin(traj: TrajectoryPair, gt_orientation_deg=101.0) -> TrajectoryPair:
     yaw = math.pi/2  - (gt_orientation_deg * math.pi/180)
     gt_roation_matrix = R.from_euler('xyz', [0, 0, yaw]).as_matrix()
 
