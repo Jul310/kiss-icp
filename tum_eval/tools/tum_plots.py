@@ -81,7 +81,7 @@ def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D, traj_est: PoseTraje
     plt.show()
     
 
-def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, plot_error='ape', max_diff=0.01):
+def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, plot_error='ape', max_diff=0.01, est_name="Estimated"):
     
     traj_ref, traj_est = traj
     if align_origin:
@@ -99,9 +99,9 @@ def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, pl
     if plot_error == 'ape':
         plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats)
     elif plot_error == 'rpy':        
-        plot_rpy_errors(traj_ref, traj_est)
+        plot_rpy_errors(traj_ref, traj_est, est_name)
     elif plot_error == 'xyz':
-        plot_xyz_errors(traj_ref, traj_est)
+        plot_xyz_errors(traj_ref, traj_est, est_name)
     else:
         raise RuntimeError(f"Unsupported plot type: plot_error={plot_error}. Must be one of ['ape', 'rpy', 'xyz']!")
     return ape_stats
@@ -119,17 +119,27 @@ def plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats, title=None):
     plt.show()
 
 
-def plot_rpy_errors(traj_ref, traj_est):
+def plot_rpy_errors(traj_ref, traj_est, est_name="Estimated"):
     _ = plt.figure()
     _, axarr = plt.subplots(3)
-    plot.traj_rpy(axarr, traj_ref, '--', "gray", "reference", start_timestamp=0)
-    plot.traj_rpy(axarr, traj_est, '-', "blue", "x", start_timestamp=0)
+    
+    # Using indices on the x axis instead of timestamps
+    traj_ref = PosePath3D(poses_se3=traj_ref.poses_se3)
+    traj_est = PosePath3D(poses_se3=traj_est.poses_se3)
+    
+    plot.traj_rpy(axarr, traj_ref, '--', "gray", "reference")
+    plot.traj_rpy(axarr, traj_est, '-', 'tab:blue', est_name)
     plt.show()
 
 
-def plot_xyz_errors(traj_ref, traj_est):
+def plot_xyz_errors(traj_ref, traj_est, est_name="Estimated"):
     _ = plt.figure()
     _, axarr = plt.subplots(3)
-    plot.traj_xyz(axarr, traj_ref, '--', "gray", "reference", start_timestamp=0)
-    plot.traj_xyz(axarr, traj_est, '-', "blue", "x", start_timestamp=0)
+
+    # Using indices on the x axis instead of timestamps
+    traj_ref = PosePath3D(poses_se3=traj_ref.poses_se3)
+    traj_est = PosePath3D(poses_se3=traj_est.poses_se3)
+    
+    plot.traj_xyz(axarr, traj_ref, '--', "gray", "reference")
+    plot.traj_xyz(axarr, traj_est, '-', 'tab:blue', est_name)
     plt.show()
