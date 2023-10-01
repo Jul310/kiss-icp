@@ -2,6 +2,7 @@ from enum import Enum
 
 COLOR_TUM_BLUE = "#0065BD"
 class Mdv3Dataset(Enum):
+    FULL_MERGE = "mdv3_full_merge"
     FULL_NO_MERGE = "mdv3_full_no_merge"
     INNOVUSION_NO_MERGE = "mdv3_innovusion_no_merge"
     INNOVUSION_MERGE = "mdv3_innovusion_merge"

@@ -368,3 +368,6 @@ nn
 .vscode
 .bkp
 data
+
+tum_eval/figures
+tum_eval/csv

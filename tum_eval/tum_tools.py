@@ -1,18 +1,18 @@
 import contextlib
-import matplotlib.pyplot as plt
+
+import math
 import numpy as np
 import os 
 import pymap3d as pm
 
+from evo.core import sync
+from evo.core.trajectory import PoseTrajectory3D, PosePath3D
 
-from evo.core import metrics
-from evo.core.trajectory import PosePath3D, PoseTrajectory3D
-from evo.tools import plot
-from evo.tools.settings import SETTINGS
 from kiss_icp.datasets import dataset_factory
 from kiss_icp.pipeline import OdometryPipeline
 from pyquaternion import Quaternion
-from typing import Dict
+
+from scipy.spatial.transform import Rotation as R
 
 
 def wgsToENU(wgs, origin):
@@ -68,79 +68,19 @@ def save_poses_tum_format(filename, poses, timestamps):
     np.savetxt(fname=f"{filename}_tum.txt", X=_to_tum_format(poses, timestamps), fmt="%.4f")
 
 
-def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True) -> None:
-    if close_all:
-        plt.close("all")
-        fig = plt.figure(f"Trajectory results")
-        plot_mode = plot.PlotMode.xy
-        ax = plot.prepare_axis(fig, plot_mode)
-        
-        # Plot GT
-        if gt_poses is not None:
-            plt.plot(gt_poses[:,0], gt_poses[:,1], c=SETTINGS.plot_reference_color,
-                    alpha=SETTINGS.plot_reference_alpha, linestyle='dashed', label="Reference")
+# Aling Origin
+def align_origin(traj: 'TrajectoryPair', gt_orientation_deg=101.0):
+    yaw = math.pi/2  - (gt_orientation_deg * math.pi/180)
+    gt_roation_matrix = R.from_euler('xyz', [0, 0, yaw]).as_matrix()
 
-    colors = ["red", "green", "blue", "yellow", "orange", "purple", "cyan"]
-    for sequence, value in results.items():
-        poses = value[2]
-        plot.traj(
-            ax=ax,
-            plot_mode=plot_mode,
-            traj=poses,
-            label=sequence,
-            style=SETTINGS.plot_trajectory_linestyle,
-            color=colors.pop(0),
-            alpha=SETTINGS.plot_trajectory_alpha,
-        )
+    origin_se3 = np.eye(4)
+    origin_se3[:3,:3] = gt_roation_matrix
+    ref_pose_origin = PosePath3D(poses_se3=[origin_se3])
+    
+    traj_est, traj_ref = traj
+    traj_est.align_origin(ref_pose_origin)
+    return sync.associate_trajectories(traj_ref, traj_est)
 
-    ax.legend(frameon=True)
-    ax.set_title(f"Sequence {sequence}")
-    plt.show()
-    
-def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D, traj_est: PoseTrajectory3D, close_all: bool = True) -> None:
-    if close_all:
-        plt.close("all")
-        fig = plt.figure(f"Trajectory results")
-        plot_mode = plot.PlotMode.xy
-        ax = plot.prepare_axis(fig, plot_mode)
-        
-   
-        plot.traj(
-            ax=ax,
-            plot_mode=plot_mode,
-            traj=traj_est,
-            label="Estimated",
-            style=SETTINGS.plot_trajectory_linestyle,
-            color='blue',
-            alpha=SETTINGS.plot_trajectory_alpha,
-        )
-        
-        plot.traj(
-            ax=ax,
-            plot_mode=plot_mode,
-            traj=traj_ref,
-            label="ground truth",
-            style=SETTINGS.plot_reference_linestyle,
-            color=SETTINGS.plot_reference_color,
-            alpha=SETTINGS.plot_reference_alpha,
-        )
-
-    ax.legend(frameon=True)
-    # ax.set_title(f"Sequence {sequence}")
-    plt.show()
-    
-    
-def plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats, title=None):
-    plot_mode = plot.PlotMode.xy
-    fig = plt.figure()
-    ax = plot.prepare_axis(fig, plot_mode)
-    plot.traj(ax, plot_mode, traj_ref, '--', "gray", "reference")
-    plot.traj_colormap(ax, traj_est, ape_metric.error, 
-                   plot_mode, min_map=ape_stats["min"], max_map=ape_stats["max"])
-    ax.legend()
-    ax.set_title(title if title is not None else "")
-    plt.show()
-    
     
 def run_kiss_icp_pipeline(dataset_path, config, gt_poses=None):
 
