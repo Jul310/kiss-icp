@@ -8,10 +8,10 @@ from evo.core.trajectory import PosePath3D, PoseTrajectory3D
 from evo.tools import plot
 from evo.tools.settings import SETTINGS
 
+from tools import tum_tools
+from tools.internal.plot_settings import get_figsize
+
 from typing import Dict
-
-from tools.tum_tools import align_origin, sync_trajectories
-
 
 def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True, figsize=None) -> None:
     if close_all:
@@ -55,7 +55,6 @@ def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D, traj_est: PoseTraje
         plot_mode = plot.PlotMode.xy
         ax = plot.prepare_axis(fig, plot_mode)
         
-   
         plot.traj(
             ax=ax,
             plot_mode=plot_mode,
@@ -82,12 +81,28 @@ def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D, traj_est: PoseTraje
     
 
 def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, plot_error='ape', max_diff=0.01, est_name="Estimated"):
-    
+    """_summary_
+
+    Args:
+        traj (TrajectoryPair): _description_
+        align_origin (bool, optional): _description_. Defaults to False.
+        print_stats (bool, optional): _description_. Defaults to False.
+        plot_error (str, optional): _description_. Defaults to 'ape'.
+        max_diff (float, optional): _description_. Defaults to 0.01.
+        est_name (str, optional): _description_. Defaults to "Estimated".
+
+    Raises:
+        RuntimeError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+    plt.close('all')
     traj_ref, traj_est = traj
     if align_origin:
-        traj_est = align_origin(traj_est)
+        traj_est = tum_tools.align_origin(traj_est)
     
-    traj_ref, traj_est = sync_trajectories(traj_ref, traj_est)
+    traj_ref, traj_est = tum_tools.sync_trajectories(traj_ref, traj_est, max_diff)
     
     ape_metric = metrics.APE()
     ape_metric.process_data((traj_ref, traj_est))
@@ -107,9 +122,11 @@ def plot_compare(traj: TrajectoryPair, align_origin=False, print_stats=False, pl
     return ape_stats
 
 
+
+
 def plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats, title=None):
     plot_mode = plot.PlotMode.xy
-    fig = plt.figure()
+    fig = plt.figure(figsize=get_figsize(wf=1, hf=1))
     ax = plot.prepare_axis(fig, plot_mode)
     plot.traj(ax, plot_mode, traj_ref, '--', "gray", "reference")
     plot.traj_colormap(ax, traj_est, ape_metric.error, 
@@ -120,8 +137,7 @@ def plot_ape_errors(traj_ref, traj_est, ape_metric, ape_stats, title=None):
 
 
 def plot_rpy_errors(traj_ref, traj_est, est_name="Estimated"):
-    _ = plt.figure()
-    _, axarr = plt.subplots(3)
+    _, axarr = plt.subplots(3, figsize=get_figsize(wf=1,hf=1))
     
     # Using indices on the x axis instead of timestamps
     traj_ref = PosePath3D(poses_se3=traj_ref.poses_se3)
@@ -133,8 +149,7 @@ def plot_rpy_errors(traj_ref, traj_est, est_name="Estimated"):
 
 
 def plot_xyz_errors(traj_ref, traj_est, est_name="Estimated"):
-    _ = plt.figure()
-    _, axarr = plt.subplots(3)
+    _, axarr = plt.subplots(3, figsize=get_figsize(wf=1,hf=1))
 
     # Using indices on the x axis instead of timestamps
     traj_ref = PosePath3D(poses_se3=traj_ref.poses_se3)
