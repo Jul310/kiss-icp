@@ -67,7 +67,9 @@ class Mdv3Dataset:
 
     def get_frames_timestamps(self) -> np.ndarray:
         stamps = np.loadtxt(os.path.join(self.data_dir,"times", "lidar_timestamps.txt"))
-        timestamps = stamps[:,0] - 1689860000 + stamps[:,1] * 1e-9
+        # this converts the stamp to lower values
+            # timestamps = stamps[:,0] - 1689860000 + stamps[:,1] * 1e-9
+        timestamps = stamps[:,0] + stamps[:,1] * 1e-9
         return timestamps
 
     def _get_point_cloud_reader(self):

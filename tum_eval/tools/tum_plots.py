@@ -11,7 +11,7 @@ from evo.tools.settings import SETTINGS
 from tools import tum_tools
 from tools.internal.plot_settings import get_figsize
 
-from typing import Dict
+from typing import Dict, Union, List
 
 def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True, figsize=None) -> None:
     if close_all:
@@ -48,32 +48,47 @@ def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True, figs
     
     return fig
 
-def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D, traj_est: PoseTrajectory3D, close_all: bool = True) -> None:
+def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D,
+                                 traj_est: Union[PoseTrajectory3D, List[PoseTrajectory3D]],
+                                 traj_est_label: Union[str, List[str]] = "Estimation",
+                                 close_all: bool = True) -> None:
     if close_all:
         plt.close("all")
-        fig = plt.figure(f"Trajectory results")
-        plot_mode = plot.PlotMode.xy
-        ax = plot.prepare_axis(fig, plot_mode)
         
+    fig = plt.figure(f"Trajectory results")
+    plot_mode = plot.PlotMode.xy
+    ax = plot.prepare_axis(fig, plot_mode)
+        
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = prop_cycle.by_key()['color']
+    
+    label_list = []
+    if not isinstance(traj_est, list):
+        traj_est = list(traj_est)
+        
+    if isinstance(traj_est_label, list):
+        if (len(traj_est_label) == len(traj_est)):
+            label_list = traj_est_label
+        else:
+            raise RuntimeError("Number of estimation trajectories does not match number of labels. Cannot correct this.")
+    else:
+        label_list = [f"{traj_est_label} {i:02d}" for i in range(1, len(traj_est)+1)]
+        
+        
+    
+    for i, traj in enumerate(traj_est, 0):
         plot.traj(
             ax=ax,
             plot_mode=plot_mode,
-            traj=traj_est,
-            label="Estimated",
+            traj=traj,
+            label=label_list[i],
             style=SETTINGS.plot_trajectory_linestyle,
-            color='blue',
+            color=colors[i],
             alpha=SETTINGS.plot_trajectory_alpha,
         )
-        
-        plot.traj(
-            ax=ax,
-            plot_mode=plot_mode,
-            traj=traj_ref,
-            label="ground truth",
-            style=SETTINGS.plot_reference_linestyle,
-            color=SETTINGS.plot_reference_color,
-            alpha=SETTINGS.plot_reference_alpha,
-        )
+    
+    plot.traj(ax=ax, plot_mode=plot_mode, traj=traj_ref, label="ground truth", style=SETTINGS.plot_reference_linestyle,
+                color=SETTINGS.plot_reference_color, alpha=SETTINGS.plot_reference_alpha)
 
     ax.legend(frameon=True)
     # ax.set_title(f"Sequence {sequence}")
@@ -130,6 +145,7 @@ def plot_compare(traj: TrajectoryPair,
 def compare_plot_multiple(trajecotries, 
                           names=None,
                           plot_mode='xyz',
+                          remove_stamps=False,
                           wf=2,
                           hf=.5):
     plt.close('all')
@@ -154,14 +170,17 @@ def compare_plot_multiple(trajecotries,
         linestyle="-"
         color = colors[i]
         
-        # Using indices on the x axis instead of timestamps
-        # t = PosePath3D(poses_se3=t.poses_se3)
+        start = t.timestamps[0]
+        if remove_stamps:
+            # Using indices on the x axis instead of timestamps
+            start = None
+            t = PosePath3D(poses_se3=t.poses_se3)
         
-        if n.lower() == 'reference':
+        if str(n).lower() == 'reference':
             linestyle = "--"
             color = 'gray'
 
-        plot_fn(axarr, t, linestyle, color, n)
+        plot_fn(axarr, t, linestyle, color, n, start_timestamp=start)
     plt.show()
     
 
