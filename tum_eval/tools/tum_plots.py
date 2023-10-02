@@ -116,28 +116,29 @@ def plot_compare(traj: TrajectoryPair,
     elif plot_mode == 'rpe':
         metric = plot_rpe_errors(traj_ref, traj_est, **kwargs)
     elif plot_mode == 'rpy':        
-        plot_rpy_errors(traj_ref, traj_est, est_name)
+        plot_rpy_errors(traj_ref, traj_est, est_name, **kwargs)
     elif plot_mode == 'xyz':
-        plot_xyz_errors(traj_ref, traj_est, est_name)
+        plot_xyz_errors(traj_ref, traj_est, est_name, **kwargs)
     else:
         raise RuntimeError(f"Unsupported plot type: plot_mode={plot_mode}. Must be one of ['ape', 'rpe', 'rpy', 'xyz']!")
     
     if print_stats and metric is not None:
         pprint.pprint(metric.get_all_statistics())
-    return metric.get_result()
+    return metric
 
 
 def compare_plot_multiple(trajecotries, 
                           names=None,
                           plot_mode='xyz',
-                          **kwargs):
+                          wf=2,
+                          hf=.5):
     plt.close('all')
     if names is not None:
         assert len(names) == len(trajecotries), "Number of given names must be equal to the number of trajecotries"
     else:
         names = [i for i in range(1, len(trajecotries))]
 
-    _, axarr = plt.subplots(3, figsize=get_figsize(wf=1,hf=1))
+    _, axarr = plt.subplots(3, figsize=get_figsize(wf=wf,hf=hf))
     
     plot_fn = None
     if plot_mode == 'xyz':
@@ -153,6 +154,9 @@ def compare_plot_multiple(trajecotries,
         linestyle="-"
         color = colors[i]
         
+        # Using indices on the x axis instead of timestamps
+        # t = PosePath3D(poses_se3=t.poses_se3)
+        
         if n.lower() == 'reference':
             linestyle = "--"
             color = 'gray'
@@ -161,7 +165,7 @@ def compare_plot_multiple(trajecotries,
     plt.show()
     
 
-def plot_rpe_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part):
+def plot_rpe_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part,):
     rpe_metric = metrics.RPE(pose_relation=pose_relation)
     rpe_metric.process_data((traj_ref, traj_est))
     rpe_stats = rpe_metric.get_all_statistics()
@@ -190,8 +194,8 @@ def plot_error_metric(traj_ref, traj_est, metric, stats, title=None):
     plt.show()
 
 
-def plot_rpy_errors(traj_ref, traj_est, est_name="Estimated"):
-    _, axarr = plt.subplots(3, figsize=get_figsize(wf=1,hf=1))
+def plot_rpy_errors(traj_ref, traj_est, est_name="Estimated",  wf=2, hf=0.5, **kwargs):
+    _, axarr = plt.subplots(3, figsize=get_figsize(wf=wf,hf=hf))
     
     # Using indices on the x axis instead of timestamps
     traj_ref = PosePath3D(poses_se3=traj_ref.poses_se3)
@@ -202,8 +206,8 @@ def plot_rpy_errors(traj_ref, traj_est, est_name="Estimated"):
     plt.show()
 
 
-def plot_xyz_errors(traj_ref, traj_est, est_name="Estimated"):
-    _, axarr = plt.subplots(3, figsize=get_figsize(wf=1,hf=1))
+def plot_xyz_errors(traj_ref, traj_est, est_name="Estimated",  wf=2, hf=0.5, **kwargs):
+    _, axarr = plt.subplots(3, figsize=get_figsize(wf=wf,hf=hf))
 
     # Using indices on the x axis instead of timestamps
     traj_ref = PosePath3D(poses_se3=traj_ref.poses_se3)
