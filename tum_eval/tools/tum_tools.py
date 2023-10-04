@@ -91,9 +91,11 @@ def save_poses_tum_format(filename, poses, timestamps):
 def sync_trajectories(traj_ref, traj_est, max_diff=0.01):
     return sync.associate_trajectories(traj_ref, traj_est, max_diff=max_diff, first_name="Reference", snd_name="Estimated")
 
-def align_origin(traj_est, gt_orientation_deg=101.0) -> TrajectoryPair:
-    yaw = math.pi/2  - (gt_orientation_deg * math.pi/180)
-    gt_roation_matrix = R.from_euler('xyz', [0, 0, yaw]).as_matrix()
+def align_origin(traj_est, roll_deg=0, pitch_deg=0, yaw_deg=101.0) -> TrajectoryPair:
+    yaw = math.pi/2  - (yaw_deg * math.pi/180)
+    roll = roll_deg * math.pi/180
+    pitch = pitch_deg * math.pi/180
+    gt_roation_matrix = R.from_euler('zyx', [roll, pitch, yaw]).as_matrix()
 
     origin_se3 = np.eye(4)
     origin_se3[:3,:3] = gt_roation_matrix
