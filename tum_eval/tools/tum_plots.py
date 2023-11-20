@@ -13,6 +13,15 @@ from tools.internal.plot_settings import get_figsize
 
 from typing import Dict, Union, List
 
+def simple_plot(*args, plot_fn, xlabel="", ylabel="", **kwargs):
+    plt.close('all')
+    f = plt.figure(figsize=get_figsize(wf=1, hf=1))
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plot_fn(*args, **kwargs)
+    plt.show()
+    
+
 def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True, figsize=None) -> None:
     if close_all:
         plt.close("all")
@@ -20,17 +29,19 @@ def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True, figs
             fig = plt.figure(f"Trajectory results", figsize=figsize)
         else:
             fig = plt.figure(f"Trajectory results")
-        plot_mode = plot.PlotMode.xy
-        ax = plot.prepare_axis(fig, plot_mode)
+    plot_mode = plot.PlotMode.xy
+    ax = plot.prepare_axis(fig, plot_mode)
         
-        # Plot GT
-        if gt_poses is not None:
-            plt.plot(gt_poses[:,0], gt_poses[:,1], c=SETTINGS.plot_reference_color,
-                    alpha=SETTINGS.plot_reference_alpha, linestyle='dashed', label="Reference")
+    # Plot GT
+    if gt_poses is not None:
+        plt.plot(gt_poses[:,0], gt_poses[:,1], c=SETTINGS.plot_reference_color,
+            alpha=SETTINGS.plot_reference_alpha, linestyle='dashed', label="Reference")
 
     
-    colors = ["red", "green", "blue", "yellow", "orange", "purple", "cyan"]
-    for sequence, value in results.items():
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = prop_cycle.by_key()['color']
+    
+    for i, (sequence, value) in enumerate(results.items()):
         poses = value[2]
         plot.traj(
             ax=ax,
@@ -38,15 +49,13 @@ def plot_trajectories(results: Dict, gt_poses=None, close_all: bool = True, figs
             traj=poses,
             label=sequence,
             style=SETTINGS.plot_trajectory_linestyle,
-            color=colors.pop(0),
+            color=colors[i],
             alpha=SETTINGS.plot_trajectory_alpha,
         )
 
     ax.legend(frameon=True, fontsize=17)
     # ax.set_title(f"Sequence {sequence}")
     plt.show()
-    
-    return fig
 
 def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D,
                                  traj_est: Union[PoseTrajectory3D, List[PoseTrajectory3D]],
@@ -55,7 +64,7 @@ def plot_trajectories_from_poses(traj_ref: PoseTrajectory3D,
     if close_all:
         plt.close("all")
         
-    fig = plt.figure(f"Trajectory results")
+    fig = plt.figure(f"Trajectory results", get_figsize(wf=1, hf=1))
     plot_mode = plot.PlotMode.xy
     ax = plot.prepare_axis(fig, plot_mode)
         
@@ -122,8 +131,10 @@ def plot_compare(traj: TrajectoryPair,
     traj_ref, traj_est = traj
     if align_origin:
         traj_est = tum_tools.align_origin(traj_est)
-    
-    traj_ref, traj_est = tum_tools.sync_trajectories(traj_ref, traj_est, max_diff)
+    try:
+        traj_ref, traj_est = tum_tools.sync_trajectories(traj_ref, traj_est, max_diff)
+    except:
+        pass
     metric = None
     
     if plot_mode == 'ape':
@@ -170,7 +181,12 @@ def compare_plot_multiple(trajecotries,
         linestyle="-"
         color = colors[i]
         
-        start = t.timestamps[0]
+        try:
+            start = t.timestamps[0]
+        except:
+            start = None
+            t = PosePath3D(poses_se3=t.poses_se3)
+            
         if remove_stamps:
             # Using indices on the x axis instead of timestamps
             start = None
@@ -184,7 +200,7 @@ def compare_plot_multiple(trajecotries,
     plt.show()
     
 
-def plot_rpe_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part,):
+def plot_rpe_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part, **kwargs):
     rpe_metric = metrics.RPE(pose_relation=pose_relation)
     rpe_metric.process_data((traj_ref, traj_est))
     rpe_stats = rpe_metric.get_all_statistics()
@@ -192,7 +208,7 @@ def plot_rpe_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRe
     return rpe_metric
 
     
-def plot_ape_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part):
+def plot_ape_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part, **kwargs):
     ape_metric = metrics.APE(pose_relation=pose_relation)
     ape_metric.process_data((traj_ref, traj_est))
     ape_stats = ape_metric.get_all_statistics()
