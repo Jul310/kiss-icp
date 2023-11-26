@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import pprint
 
+from os import path
+from copy import deepcopy
+
 from evo.core import metrics
 from evo.core import sync
 from evo.core.sync import TrajectoryPair
@@ -128,13 +131,16 @@ def plot_compare(traj: TrajectoryPair,
         _type_: _description_
     """
     plt.close('all')
-    traj_ref, traj_est = traj
+    traj_ref, traj_est = deepcopy(traj)
     if align_origin:
         traj_est = tum_tools.align_origin(traj_est)
-    try:
-        traj_ref, traj_est = tum_tools.sync_trajectories(traj_ref, traj_est, max_diff)
-    except:
-        pass
+        
+    if len(traj_ref.poses_se3) != len(traj_est.poses_se3):
+        try:
+            traj_ref, traj_est = tum_tools.sync_trajectories(traj_ref, traj_est, max_diff)
+        except:
+            pass
+        
     metric = None
     
     if plot_mode == 'ape':
@@ -218,11 +224,12 @@ def plot_ape_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRe
 
 def plot_error_metric(traj_ref, traj_est, metric, stats, title=None):
     plot_mode = plot.PlotMode.xy
-    fig = plt.figure(figsize=get_figsize(wf=1, hf=1))
+    fig = plt.figure(figsize=get_figsize(wf=0.75, hf=.75))
+    # fig = plt.figure()
     ax = plot.prepare_axis(fig, plot_mode)
     plot.traj(ax, plot_mode, traj_ref, '--', "gray", "reference")
     plot.traj_colormap(ax, traj_est, metric.error, 
-                   plot_mode, min_map=stats["min"], max_map=stats["max"])
+                   plot_mode, min_map=stats["min"], max_map=stats["max"], plot_start_end_markers=False)
     ax.legend()
     if title :
         ax.set_title(title)
@@ -250,4 +257,75 @@ def plot_xyz_errors(traj_ref, traj_est, est_name="Estimated",  wf=2, hf=0.5, **k
     
     plot.traj_xyz(axarr, traj_ref, '--', "gray", "reference")
     plot.traj_xyz(axarr, traj_est, '-', 'tab:blue', est_name)
+    plt.show()
+
+
+def plot_statistical_error_metric(metric, show_plot=False, save_dir="", name_prefix=""):
+    _UNIT_LOOKUP = {
+        metrics.PoseRelation.full_transformation: "",
+        metrics.PoseRelation.translation_part: " $(m)$",
+        metrics.PoseRelation.rotation_angle_deg: " $(deg)$",
+    }
+    
+    stats = metric.get_all_statistics()
+    metric_type = "APE" if isinstance(metric, metrics.APE) else "RPE"
+    unit = _UNIT_LOOKUP[metric.pose_relation]
+    
+    name = f"{metric_type}_{metric.pose_relation._name_}.pdf"
+    
+    fig = plt.figure(figsize=get_figsize(wf=1.5, hf=.75))
+    plot.error_array(fig.gca(), metric.error,
+                 statistics={s:v for s,v in stats.items() if s != "sse"},
+                 name=f"{metric_type}{unit}", title=f"{metric_type} w.r.t. " + metric.pose_relation.value, xlabel="index")
+    
+    if show_plot:
+        plt.show()
+    
+    if save_dir:
+        prefix = f"{name_prefix}_" if name_prefix else ""
+        save = path.join(save_dir, f"{prefix}{name}")
+        plt.savefig(save, format="pdf", bbox_inches="tight")
+        
+        
+def plot_trajectory_segments(traj: PoseTrajectory3D, n=1000, title=None, wf=1, hf=1):
+    plot_mode = plot.PlotMode.xy
+    fig = plt.figure(figsize=get_figsize(wf=wf, hf=hf))
+    # fig = plt.figure()
+    ax = plot.prepare_axis(fig, plot_mode)
+    
+    def split_trajectory(traj: PoseTrajectory3D, num_poses=1000):
+        n_max = len(traj.poses_se3)
+        n_segments = n_max // num_poses
+        n = 0
+        result = []
+        while n < n_max:
+            traj_loop = deepcopy(traj)
+            end = n_max if len(result) == n_segments else n + num_poses
+            traj_loop.reduce_to_ids(range(n, end))
+            result.append(traj_loop)
+            n = end
+            
+        return result
+    
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = prop_cycle.by_key()['color']
+    trajectory_segments = split_trajectory(traj, n)
+    
+    for i, segment in enumerate(trajectory_segments):  
+        color = colors[i%len(colors)] 
+        start = segment.positions_xyz[0][0:2]
+        end = segment.positions_xyz[-1][0:2]
+        label = f"{i}"
+        ax.scatter(*start, marker="o", color=color,
+               alpha=1, label=None)
+        ax.annotate(label, start)
+        # ax.scatter(*end, marker="x", color=color, alpha=1,
+        #        label=end_label)
+
+        plot.traj(ax, plot_mode, segment, color=color)
+                   
+    
+    # ax.legend()
+    if title :
+        ax.set_title(title)
     plt.show()
