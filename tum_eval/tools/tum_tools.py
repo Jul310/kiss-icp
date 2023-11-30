@@ -1,21 +1,19 @@
 import contextlib
-
 import math
 import numpy as np
 import os 
-import pymap3d as pm
 import pickle
+import pymap3d as pm
 
 from evo.core import sync
 from evo.core.sync import TrajectoryPair
 from evo.core.trajectory import PoseTrajectory3D, PosePath3D
-
 from kiss_icp.datasets import dataset_factory
 from kiss_icp.pipeline import OdometryPipeline
 from pyquaternion import Quaternion
-
+from rosbags.rosbag2.reader import Reader as BagReader
+from rosbags.serde import deserialize_cdr
 from scipy.spatial.transform import Rotation as R
-
 from typing import Dict
 
 
@@ -123,3 +121,30 @@ def run_kiss_icp_pipeline(dataset_path, config, gt_poses=None):
     
     trajectory_poses = PoseTrajectory3D(poses_se3=result_poses, timestamps=timestamps)
     return result_poses, trajectory_poses, timestamps
+
+
+def pose_to_str(msg):
+    x = msg.pose.pose.position.x
+    y = msg.pose.pose.position.y
+    z = msg.pose.pose.position.z
+    
+    cov_array = msg.pose.covariance.reshape(6,6)[0:3, 0:3]
+    
+    cov_str = " ".join((str(i) for i in cov_array.flatten()))
+    return f"{x} {y} {z} {cov_str}"
+
+def pose_with_covariance_to_txt(rosbag_path, topic, output_path): 
+
+    result =[]
+    with BagReader(rosbag_path) as reader:
+        
+        # iterate over messages
+        for connection, timestamp, rawdata in reader.messages():
+            if connection.topic == topic:
+                msg = deserialize_cdr(rawdata, connection.msgtype) 
+                stamp = msg.header.stamp.sec + msg.header.stamp.nanosec *1e-9
+                line = f"{stamp} {pose_to_str(msg)}"
+                result.append(line)
+                
+    with open(output_path, 'w') as f:
+        f.write('\n'.join((r for r in result)))

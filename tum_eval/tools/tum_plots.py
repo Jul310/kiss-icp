@@ -315,7 +315,7 @@ def plot_trajectory_segments(traj: PoseTrajectory3D, n=1000, title=None, wf=1, h
         color = colors[i%len(colors)] 
         start = segment.positions_xyz[0][0:2]
         end = segment.positions_xyz[-1][0:2]
-        label = f"{i}"
+        label = f"{i*n} - {(i+1)*n if (i+1)*n < traj.num_poses else traj.num_poses}"
         ax.scatter(*start, marker="o", color=color,
                alpha=1, label=None)
         ax.annotate(label, start)
