@@ -1,4 +1,6 @@
+import folium
 import matplotlib.pyplot as plt
+import numpy as np
 import pprint
 
 from os import path
@@ -315,6 +317,10 @@ def plot_trajectory_segments(traj: PoseTrajectory3D, n=1000, title=None, wf=1, h
         color = colors[i%len(colors)] 
         start = segment.positions_xyz[0][0:2]
         end = segment.positions_xyz[-1][0:2]
+        
+        length = np.linalg.norm(segment.positions_xyz[-1] - segment.positions_xyz[0])
+         
+        print(f"{i}: Segment from {i*n} to {(i+1)*n} - length: {length}")
         label = f"{i*n} - {(i+1)*n if (i+1)*n < traj.num_poses else traj.num_poses}"
         ax.scatter(*start, marker="o", color=color,
                alpha=1, label=None)
@@ -323,9 +329,11 @@ def plot_trajectory_segments(traj: PoseTrajectory3D, n=1000, title=None, wf=1, h
         #        label=end_label)
 
         plot.traj(ax, plot_mode, segment, color=color)
-                   
+        
     
     # ax.legend()
     if title :
         ax.set_title(title)
     plt.show()
+    
+    return map
