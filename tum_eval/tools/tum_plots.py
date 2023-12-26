@@ -216,7 +216,7 @@ def plot_rpe_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRe
     return rpe_metric
 
     
-def plot_ape_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.translation_part, **kwargs):
+def plot_ape_errors(traj_ref, traj_est, title=None, pose_relation=metrics.PoseRelation.full_transformation, **kwargs):
     ape_metric = metrics.APE(pose_relation=pose_relation)
     ape_metric.process_data((traj_ref, traj_est))
     ape_stats = ape_metric.get_all_statistics()
@@ -233,6 +233,8 @@ def plot_error_metric(traj_ref, traj_est, metric, stats, title=None):
     plot.traj_colormap(ax, traj_est, metric.error, 
                    plot_mode, min_map=stats["min"], max_map=stats["max"], plot_start_end_markers=False)
     ax.legend()
+    # cir = plt.Circle((145, -19), 18, color='r',fill=False, linestyle="--")
+    # ax.add_patch(cir)
     if title :
         ax.set_title(title)
     plt.show()
