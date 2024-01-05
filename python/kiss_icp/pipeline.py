@@ -121,6 +121,8 @@ class OdometryPipeline:
     @staticmethod
     def save_poses_tum_format(filename, poses, timestamps):
         def _to_tum_format(poses, timestamps):
+            if not timestamps:
+                timestamps = list(range(len(poses)))
             tum_data = []
             with contextlib.suppress(ValueError):
                 for idx in range(len(poses)):
@@ -129,7 +131,7 @@ class OdometryPipeline:
                     tum_data.append([float(timestamps[idx]), tx, ty, tz, qx, qy, qz, qw])
             return np.array(tum_data).astype(np.float64)
 
-        np.savetxt(fname=f"{filename}_tum.txt", X=_to_tum_format(poses, timestamps), fmt="%.4f")
+        np.savetxt(fname=f"{filename}_tum.txt", X=_to_tum_format(poses, timestamps))
 
     def _calibrate_poses(self, poses):
         return (

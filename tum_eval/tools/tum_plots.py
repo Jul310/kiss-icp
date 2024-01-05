@@ -232,6 +232,7 @@ def plot_error_metric(traj_ref, traj_est, metric, stats, title=None):
     plot.traj(ax, plot_mode, traj_ref, '--', "gray", "reference")
     plot.traj_colormap(ax, traj_est, metric.error, 
                    plot_mode, min_map=stats["min"], max_map=stats["max"], plot_start_end_markers=False)
+                #    plot_mode, min_map=0, max_map=15, plot_start_end_markers=False)
     ax.legend()
     # cir = plt.Circle((145, -19), 18, color='r',fill=False, linestyle="--")
     # ax.add_patch(cir)

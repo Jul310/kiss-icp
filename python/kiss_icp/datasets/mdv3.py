@@ -35,6 +35,7 @@ class Mdv3Dataset:
         # Config stuff
         self.data_dir = data_dir
         self.sequence_id = os.path.basename(data_dir)
+        # self.scans_dir = os.path.join(os.path.realpath(data_dir), "pcd_processed")
         self.scans_dir = os.path.join(os.path.realpath(data_dir), "pcd")
         self.scan_files = np.array(
             natsort.natsorted(
@@ -66,11 +67,15 @@ class Mdv3Dataset:
         return points.astype(np.float64)
 
     def get_frames_timestamps(self) -> np.ndarray:
-        stamps = np.loadtxt(os.path.join(self.data_dir,"times", "lidar_timestamps.txt"))
-        # this converts the stamp to lower values
-            # timestamps = stamps[:,0] - 1689860000 + stamps[:,1] * 1e-9
-        timestamps = stamps[:,0] + stamps[:,1] * 1e-9
-        return timestamps
+        time_path = os.path.join(self.data_dir,"times", "lidar_timestamps.txt")
+        if os.path.exists(time_path):
+            stamps = np.loadtxt(time_path)
+            # this converts the stamp to lower values
+                # timestamps = stamps[:,0] - 1689860000 + stamps[:,1] * 1e-9
+            timestamps = stamps[:,0] + stamps[:,1] * 1e-9
+            return timestamps
+        else:
+            return []
 
     def _get_point_cloud_reader(self):
         """Attempt to guess with try/catch blocks which is the best point cloud reader to use for
